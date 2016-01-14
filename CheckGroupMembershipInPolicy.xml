@@ -1,0 +1,86 @@
+Checking group membership in a policy.
+
+
+<?xml version="1.0" encoding="UTF-8"?><policy>
+	<rule>
+		<description>Only allow users</description>
+		<conditions>
+			<and>
+				<if-class-name op="not-equal">User</if-class-name>
+			</and>
+		</conditions>
+		<actions>
+			<do-break/>
+		</actions>
+	</rule>
+	<rule disabled="true">
+		<description>If removing group membership, allow event to process</description>
+		<conditions>
+			<and>
+				<if-operation op="equal">modify</if-operation>
+				<if-op-attr mode="regex" name="Group Membership" op="changing-from">.*EPIC_GROUP.*</if-op-attr>
+			</and>
+		</conditions>
+		<actions>
+			<do-break/>
+		</actions>
+	</rule>
+	<rule>
+		<description>If adding group membership, allow event to process</description>
+		<conditions>
+			<and>
+				<if-operation op="equal">modify</if-operation>
+				<if-op-attr mode="regex" name="Group Membership" op="changing-to">.*EPIC_GROUP.*</if-op-attr>
+			</and>
+		</conditions>
+		<actions>
+			<do-break/>
+		</actions>
+	</rule>
+	<rule>
+		<description>Get group membership attribute</description>
+		<conditions/>
+		<actions>
+			<do-set-local-variable name="membership">
+				<arg-node-set>
+					<token-src-attr name="Group Membership"/>
+				</arg-node-set>
+			</do-set-local-variable>
+			<do-set-local-variable name="groups">
+				<arg-string>
+					<token-text xml:space="preserve">~</token-text>
+				</arg-string>
+			</do-set-local-variable>
+			<do-for-each>
+				<arg-node-set>
+					<token-local-variable name="membership"/>
+				</arg-node-set>
+				<arg-actions>
+					<do-set-local-variable name="groups">
+						<arg-string>
+							<token-local-variable name="groups"/>
+							<token-local-variable name="current-node"/>
+							<token-text xml:space="preserve">~</token-text>
+						</arg-string>
+					</do-set-local-variable>
+				</arg-actions>
+			</do-for-each>
+		</actions>
+	</rule>
+	<rule>
+		<description>Verify user is a member of the group</description>
+		<conditions>
+			<and>
+				<if-local-variable mode="regex" name="groups" op="not-equal">.*EPIC_GROUP.*</if-local-variable>
+			</and>
+		</conditions>
+		<actions>
+			<do-trace-message>
+				<arg-string>
+					<token-text xml:space="preserve">User is not a member of EPIC_GROUP - veto event</token-text>
+				</arg-string>
+			</do-trace-message>
+			<do-veto/>
+		</actions>
+	</rule>
+</policy>
